@@ -1,6 +1,19 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-void main() {
+import 'package:flutter/material.dart';
+import 'package:flutterapi/model/Personnage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert' as convert;
+
+Future<void> main() async {
+  /*
+  final client = http.Client();
+  try {
+    print(await client.read(Uri.parse('https://rickandmortyapi.com/api/character')));
+  } finally {
+  client.close();
+  }
+  */
   runApp(const MyApp());
 }
 
@@ -49,6 +62,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  late Future<List<Personnage>> futurePersonnage;
+
+  @override
+  void initState() {
+    super.initState();
+    futurePersonnage = featchCharacters();
+  }
 
   void _incrementCounter() {
     setState(() {
@@ -59,6 +79,30 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       _counter++;
     });
+  }
+
+  Future<List<Personnage>> featchCharacters() async {
+    final response = await http
+        .get(Uri.parse('https://rickandmortyapi.com/api/character'));
+
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+
+      final List parsed = json.decode(response.body)['results'];
+
+      final charas = <Personnage>[];
+      for (var i = 0; i < parsed.length ; i++) {
+        charas.add(new Personnage.fromJson(parsed[i]));
+      }
+
+      return charas;
+      // return Personnage.fromJson(jsonDecode(response.body)['results']);
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to load Personnage');
+    }
   }
 
   @override
@@ -75,35 +119,41 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
+      body: FutureBuilder<List<Personnage>>(
+        future: futurePersonnage,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            List documents = snapshot.data!;
+            return GridView.builder(
+              itemCount: documents.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+              itemBuilder: (context, index){
+                return InkWell(
+                    child: Container(
+                    decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    image: DecorationImage(
+                      image: NetworkImage(documents[index].image),
+                      fit: BoxFit.fill
+                      ),
+                      ),
+                      height: 40,
+                      child: Center(
+                          child: Text(documents[index].name, style: TextStyle(color: Colors.black))
+                    ),
+                  )
+                );
+              }
+            );
+
+
+          } else if (snapshot.hasError) {
+            return Text('${snapshot.error}');
+          }
+
+          // By default, show a loading spinner.
+          return const CircularProgressIndicator();
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
