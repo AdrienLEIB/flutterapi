@@ -138,7 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       ),
                       height: 40,
-                      child: Center(
+                      child: Container(
                           child: Text(documents[index].name, style: TextStyle(color: Colors.black))
                     ),
                   )
